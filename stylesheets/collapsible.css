@@ -1,0 +1,43 @@
+.collapsible {
+	overflow: hidden;
+	margin: 0;
+	transition: max-height 0.2s ease-out;
+}
+
+.collapsible-container {
+	border: 1px solid var(--color-panel-hover);
+	border-radius: 2px;
+	overflow: hidden;
+}
+
+.collapse-button {
+	padding: 8px;
+	font-weight: 500;
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+}
+
+.collapse-button[collapsed=false], .collapse-button[collapsed=true]:hover {
+	background: var(--color-panel);
+}
+
+.collapse-button[collapsed=true], .collapse-button[collapsed=false]:hover {
+	background: var(--color-panel-hover);
+}
+
+.collapse-button:before {
+	display: inline-block;
+	content: '';
+	height: 1em;
+	width: 1em;
+	margin: 0 8px 0 4px;
+}
+
+.collapse-button[collapsed=true]:before {
+	background-image: var(--icon-caret-down);
+}
+
+.collapse-button[collapsed=false]:before {
+	background-image: var(--icon-caret-right);
+}

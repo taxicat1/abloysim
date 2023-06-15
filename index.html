@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<!-- 
+	Ornamental design of picking tool shown is intellectual property of Jaakko Fagerlund
+-->
+<head>
+	<title>Abloy Classic picking simulator</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+	<meta name="description" content="Abloy Classic online picking simulator" />
+	<meta name="viewport" content="width=1050,user-scalable=no" />
+	
+	<!-- Continuing dependence on Google fonts -->
+	<link href="https://fonts.googleapis.com/css?family=Roboto:500,400,300" rel="stylesheet">
+	
+	<link rel="stylesheet" href="stylesheets/main.css" />
+	<link rel="stylesheet" href="stylesheets/collapsible.css" />
+</head>
+<body>
+<h1>Abloy Classic picking simulator</h1>
+
+<div class="collapsible-container" style="max-width:1000px; margin:auto">
+	<div role="button" class="collapse-button" collapsed="false">Instructions</div>
+	<div class="collapsible">
+		<ul style="margin: 15px 0;">
+			<li>Click on the game to focus it. Press Esc to unfocus. Works on desktop and mobile on modern browsers.</li>
+			<li>Move the mouse around or touch and drag to turn and slide the pick tip.</li>
+			<li>Heavy tension is applied by default. Press and hold Left click, Shift, Ctrl, or Enter, or touch the tensioner on a touch device, to release tension some. With tension released you can move the disks around.</li>
+			<li>False gates, when binding, have less jiggle to them than true gates.</li>
+			<li>Unlike real Abloys which bind mostly back to front, the simulation is totally random.</li>
+			<li>The bitting follows the factory pattern: 005XXXXXXX0 with the same cut unable to appear three times in a row. The rearmost 0 disk is being tensioned off of.</li>
+			<li>If you're stuck, a video tutorial is <a target="_blank" href="https://www.youtube.com/watch?v=WtH8eWWQDIQ">available here</a>.</li>
+		</ul>
+	</div>
+</div>
+
+<div id="container">
+	<canvas id="c" width="1000" height="500"></canvas>
+	<p>
+		<span>Movement sensitivity:</span>
+		<input id ="sens" type="range" min="0.1" max="2.0" step="0.1" value="1.0"/>
+		<span id="sensdisplay">1.0</span>
+	</p>
+	<br />
+	<p id="shill"><a href="https://ko-fi.com/assamow" target="_blank">Support me on Ko-Fi if you thought this was cool</a></p>
+</div>
+
+
+<script src="scripts/collapsible.js"></script>
+<script src="scripts/sens.js"></script>
+<script src="scripts/seededRandom.js"></script>
+<script src="scripts/game.js"></script>
+<script>initGame();</script>
+
+</body>
+</html>
