@@ -21,7 +21,7 @@ function saveSens() {
 }
 
 function displaySens() {
-	sensDisplay.textContent = parseFloat(sens.value).toFixed(1);
+	sensDisplay.textContent = Math.round(parseFloat(sens.value) * 100) + '%';
 }
 displaySens();
 
