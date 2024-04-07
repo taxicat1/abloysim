@@ -81,6 +81,8 @@ const gameData = {
 	
 	endFade : 0,
 	
+	randomSeed : -1,
+	
 	
 	showFps      : false,
 	fpsCountTime : null,
@@ -211,14 +213,8 @@ function recalculateDiskBinds() {
 
 // Sets up gameData with random disks which are all zeroed
 function initGame(randomSeed) {
-	
-	let randFunc;
-	if (!randomSeed) {
-		randFunc = Math.random;
-	} else {
-		let r = new SeededRandom(randomSeed);
-		randFunc = function() { return r.random(); }
-	}
+	randomSeed = randomSeed || generateSeed();
+	let rand = new SeededRandom(randomSeed);
 	
 	function makeDisk(trueGatePosition, noFalses) {
 		const NO_GATE    = O = 0;
@@ -275,7 +271,7 @@ function initGame(randomSeed) {
 		// 5 attempts are made so there can be a varying amount of the gates
 		if (!noFalses) {
 			for (let i = 0; i < 5; i++) {
-				let index = Math.floor(randFunc() * 6);
+				let index = Math.floor(rand.random() * 6);
 				
 				// Ugly, but two edge case checks and one general check
 				if (index === 0) {
@@ -297,7 +293,7 @@ function initGame(randomSeed) {
 			gates = [ O, O, O, O, O, O ];
 			gates[trueGatePosition] = TRUE_GATE;
 		} else {
-			gates = gatePattern[trueGatePosition][Math.floor(randFunc() * gatePattern[trueGatePosition].length)];
+			gates = gatePattern[trueGatePosition][Math.floor(rand.random() * gatePattern[trueGatePosition].length)];
 		}
 		*/
 		
@@ -313,23 +309,28 @@ function initGame(randomSeed) {
 	// Knuth shuffle
 	function shuffleArray(arr) {
 		for (let i = arr.length - 1; i > 0; i--) {
-			const j = Math.floor(randFunc() * (i + 1));
+			const j = Math.floor(rand.random() * (i + 1));
 			[arr[i], arr[j]] = [arr[j], arr[i]];
 		}
 	}
 	
 	// Around 16% of possible bittings are invalid!
 	function generateValidBitting() {
-		let bitting = [0,5,null,null,null,null,null,null,null,0];
+		let bitting;
 		let isValid;
 		
+		// do { generate } while(invalid) pattern prevents bias
 		do {
-			for (let i = 2; i < bitting.length - 1; i++) {
-				bitting[i] = Math.floor(randFunc() * 6);
+			bitting = [0,5,null,null,null,null,null,null,null,0];
+			for (let i = 0; i < bitting.length; i++) {
+				if (bitting[i] === null) {
+					bitting[i] = Math.floor(rand.random() * 6);
+				}
 			}
 			
 			isValid = true;
 			for (let i = 1; i < bitting.length - 1; i++) {
+				// Same cut cannot appear 3 times in a row
 				if (bitting[i-1] === bitting[i] && bitting[i] === bitting[i+1]) {
 					isValid = false;
 					break;
@@ -349,9 +350,14 @@ function initGame(randomSeed) {
 	gameData.endFade             = 0;
 	gameData.pickHandleOffset    = [...gameData.pickHandleOffsetDefault];
 	gameData.tensionHandleOffset = [...gameData.tensionHandleOffsetDefault];
+	gameData.randomSeed          = randomSeed;
 	
+	// Reset and shuffle binding order arrays
+	for (let i = 0; i < gameData.bindingOrder1.length; i++) {
+		gameData.bindingOrder1[i] = i;
+		gameData.bindingOrder2[i] = i;
+	}
 	
-	// Shuffle binding order arrays
 	shuffleArray(gameData.bindingOrder1);
 	shuffleArray(gameData.bindingOrder2);
 	

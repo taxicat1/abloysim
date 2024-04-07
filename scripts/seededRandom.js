@@ -1,14 +1,14 @@
 /*
 	Seeded random
 	
-	Currently not used. Idea was to be able to input a specific seed,
+	Currently not fully used. Idea was to be able to input a specific seed,
 	which would then deterministically generate a bitting and binding order 
 	for use in fair competitions.
 	Implementation is a basic and lazy Xor-Shift generator.
 */
 
 function generateSeed() {
-	return Math.floor(Math.random() * 0x100000000).toString(36);
+	return Math.floor(Math.random() * 0x100000000);
 }
 
 class SeededRandom {
@@ -17,7 +17,7 @@ class SeededRandom {
 	}
 	
 	seed(s) {
-		this.state = (s || 0) === 0 ? 0x01234567 : s;
+		this.state = s || generateSeed();
 	}
 	
 	randInt() {
