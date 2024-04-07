@@ -84,10 +84,10 @@ const gameData = {
 	randomSeed : -1,
 	
 	
-	showFps      : false,
-	fpsCountTime : null,
-	fpsCount     : 0,
-	fpsLast      : null,
+	showFps         : false,
+	fpsSamples      : [],
+	fpsSamplesMax   : 90, // Arbitrary
+	fpsSamplesIndex : 0,
 };
 
 
@@ -556,22 +556,17 @@ function drawFrame() {
 	
 	// Debug fps
 	if (gameData.showFps) {
-		if (gameData.fpsCountTime === null) {
-			gameData.fpsCountTime = performance.now();
-		} else {
-			let curTime = performance.now();
-			if (curTime - gameData.fpsCountTime >= 1000) {
-				gameData.fpsCountTime = curTime;
-				gameData.fpsLast      = gameData.fpsCount;
-				gameData.fpsCount     = 0;
-			} else {
-				gameData.fpsCount++;
-			}
-			
-			if (gameData.fpsLast !== null) {
-				// Default settings should be fine to draw this
-				ctx.fillText(`${gameData.fpsLast} fps`, 1, 10);
-			}
+		gameData.fpsSamples[gameData.fpsSamplesIndex] = performance.now();
+		
+		let next = (gameData.fpsSamplesIndex + 1) % gameData.fpsSamplesMax;
+		let deltaTime = gameData.fpsSamples[gameData.fpsSamplesIndex] - gameData.fpsSamples[next];
+		// Subtract 1 here due to fenceposting
+		let fps = (1000 * (gameData.fpsSamplesMax - 1)) / deltaTime;
+		
+		gameData.fpsSamplesIndex = next;
+		
+		if (!isNaN(fps)) {
+			ctx.fillText(`${fps.toFixed(2)} fps`, 1, 10);
 		}
 	}
 }
