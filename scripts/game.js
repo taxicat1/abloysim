@@ -536,7 +536,7 @@ function drawFrame() {
 		let ds = (gameData.endTime - gameData.startTime) / 1000
 		let minutes = Math.floor(ds / 60).toString();
 		let seconds = (ds % 60).toFixed(3);
-		let winTime = minutes + "m " + seconds + "s";
+		let winTime = `${minutes}m ${seconds}s`;
 		
 		// Write text to canvas
 		doCanvasWork(() => {
@@ -546,14 +546,13 @@ function drawFrame() {
 			fillTextCentered("Open!", 150);
 			
 			ctx.font = "20px Roboto, sans-serif";
-			fillTextCentered("Bitting: " + bitting, 240);
-			fillTextCentered("Picked in: " + winTime, 270);
+			fillTextCentered(`Bitting: ${bitting}`, 240);
+			fillTextCentered(`Picked in: ${winTime}`, 270);
 			
 			ctx.font = "16px Roboto, sans-serif";
 			fillTextCentered("Click or tap to restart", 365);
 		});
 	}
-	
 	
 	// Debug fps
 	if (gameData.showFps) {
@@ -571,7 +570,7 @@ function drawFrame() {
 			
 			if (gameData.fpsLast !== null) {
 				// Default settings should be fine to draw this
-				ctx.fillText(gameData.fpsLast + " fps", 1, 10);
+				ctx.fillText(`${gameData.fpsLast} fps`, 1, 10);
 			}
 		}
 	}
