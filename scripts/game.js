@@ -88,6 +88,12 @@ const gameData = {
 	fpsCountTime : null,
 	fpsCount     : 0,
 	fpsLast      : null,
+	
+	recordDemo : false,
+	demo : {
+		seed: -1,
+		inputs: [],
+	}
 };
 
 
@@ -351,6 +357,11 @@ function initGame(randomSeed) {
 	gameData.pickHandleOffset    = [...gameData.pickHandleOffsetDefault];
 	gameData.tensionHandleOffset = [...gameData.tensionHandleOffsetDefault];
 	gameData.randomSeed          = randomSeed;
+	
+	if (gameData.recordDemo) {
+		gameData.demo.seed = randomSeed;
+		gameData.demo.inputs = [];
+	}
 	
 	// Reset and shuffle binding order arrays
 	for (let i = 0; i < gameData.bindingOrder1.length; i++) {
@@ -648,6 +659,17 @@ function inputMovement(movementX, movementY) {
 		gameData.startTime = performance.now();
 	}
 	
+	if (gameData.recordDemo) {
+		gameData.demo.inputs.push({
+			'type' : 'movement',
+			'data' : {
+				'x' : movementX,
+				'y' : movementY,
+			},
+			'time' : performance.now() - gameData.startTime,
+		});
+	}
+	
 	let sensitivity = parseFloat(sens.value);
 	movementX *= sensitivity;
 	movementY *= sensitivity;
@@ -768,6 +790,16 @@ function inputTension(tensionReleased) {
 		gameData.startTime = performance.now();
 	}
 	
+	if (gameData.recordDemo) {
+		gameData.demo.inputs.push({
+			'type' : 'tension',
+			'data' : {
+				'released' : !!tensionReleased,
+			},
+			'time' : performance.now() - gameData.startTime
+		});
+	}
+	
 	// Only do anything if the new status is different from the existing status
 	if (tensionReleased !== gameData.tensionReleased) {
 		// Update status
@@ -790,6 +822,45 @@ function inputTension(tensionReleased) {
 				doAnimation("turnCore");
 			}
 		}
+	}
+}
+
+// (Unused without direct console interface) Record a demo.
+function recordDemo(seed) {
+	gameData.recordDemo = true;
+	initGame(seed);
+}
+
+// (Unused without direct console interface) Play back a demo.
+function playDemo(demo, i) {
+	demo = demo || gameData.demo;
+	i = i || 0;
+	if (i === 0) {
+		gameData.recordDemo = false;
+		initGame(demo.seed);
+	}
+	
+	let input = demo.inputs[i];
+	switch (input.type) {
+		case "movement":
+			inputMovement(input.data.x, input.data.y);
+			break;
+		
+		case "tension":
+			inputTension(input.data.released);
+			break;
+	}
+	
+	if (i !== demo.inputs.length - 1) {
+		let delay = demo.inputs[i+1].time - (performance.now() - gameData.startTime);
+		// ISSUE: setTimeout is REALLY BADLY inaccurate, often taking up to 15ms of extra time, leading to desyncs by the end
+		// might honestly be better to just spinlock and wait for values in performance.now() ?
+		if (delay < 0) {
+			console.log(`Input expected at ${demo.inputs[i+1].time} but actually fired at ${performance.now() - gameData.startTime}`);
+		}
+		setTimeout(playDemo.bind(this, demo, i+1), delay);
+	} else {
+		console.log("Playback complete");
 	}
 }
 
