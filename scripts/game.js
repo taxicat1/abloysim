@@ -79,6 +79,8 @@ const gameData = {
 	startTime : null,
 	endTime   : null,
 	
+	previousFrameTime : null,
+	
 	endFade : 0,
 	
 	randomSeed : -1,
@@ -352,6 +354,8 @@ function initGame(randomSeed) {
 	gameData.tensionHandleOffset = [...gameData.tensionHandleOffsetDefault];
 	gameData.randomSeed          = randomSeed;
 	
+	activeAnimations.clear();
+	
 	// Reset and shuffle binding order arrays
 	for (let i = 0; i < gameData.bindingOrder1.length; i++) {
 		gameData.bindingOrder1[i] = i;
@@ -376,6 +380,68 @@ function initGame(randomSeed) {
 	loadImgs(gameLoop);
 }
 
+// Animations, which will use the time since the previously rendered frame to move something
+const activeAnimations = new Set();
+
+// Each animation returns a bool if it should continue to run in the next frame
+const animations = {
+	"tensionUpdate" : function(msSincePrevFrame) {
+		const tensionStep = 0.09 * (gameData.tensionReleased ? 1 : -1) * msSincePrevFrame;
+		gameData.tensionHandleOffset[1] += tensionStep;
+		gameData.tensionHandleOffset[1] = clamp(gameData.tensionHandleClamp[1][0], gameData.tensionHandleOffset[1], gameData.tensionHandleClamp[1][1]);
+		
+		if (gameData.tensionHandleOffset[1] === gameData.tensionHandleClamp[1][0] || 
+			gameData.tensionHandleOffset[1] === gameData.tensionHandleClamp[1][1]
+		) {
+			return false;
+		}
+		
+		return true;
+	},
+	
+	"turnCore" : function(msSincePrevFrame) {
+		const turnStep         = -0.25 * msSincePrevFrame;
+		const tensionHandleMax = -95;
+		const pickHandleMax    = -235;
+		
+		gameData.pickHandleOffset[1]    = Math.max(pickHandleMax,    gameData.pickHandleOffset[1]    + turnStep);
+		gameData.tensionHandleOffset[1] = Math.max(tensionHandleMax, gameData.tensionHandleOffset[1] + turnStep);
+		
+		if (gameData.tensionHandleOffset[1] === tensionHandleMax) {
+			setTimeout(function(){activeAnimations.add("fadeOut");}, 600);
+			return false;
+		}
+		
+		return true;
+	},
+	
+	"fadeOut" : function(msSincePrevFrame) {
+		const fadeStep = 0.8 * msSincePrevFrame;
+		const fadeMax  = 180;
+		
+		gameData.endFade = Math.min(gameData.endFade + fadeStep, fadeMax);
+		
+		if (gameData.endFade === fadeMax) {
+			gameData.gameState = "end";
+			return false;
+		}
+		
+		return true;
+	},
+};
+
+function doAnimations() {
+	let msSincePrevFrame = performance.now() - gameData.previousFrameTime;
+	activeAnimations.forEach(animationName => {
+		if (animations.hasOwnProperty(animationName)) {
+			let loop = animations[animationName].apply(this, [ msSincePrevFrame ]);
+			if (!loop) {
+				activeAnimations.delete(animationName);
+			}
+		}
+	});
+}
+
 // Draws frame to canvas using data in gameData
 function drawFrame() {
 	
@@ -391,6 +457,7 @@ function drawFrame() {
 	const overlayAlpha = 0.72;
 	
 	ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+	doAnimations();
 	
 	// Drawing game objects translated to the picking position
 	doCanvasWork(() => {
@@ -569,68 +636,8 @@ function drawFrame() {
 			ctx.fillText(`${fps.toFixed(2)} fps`, 1, 10);
 		}
 	}
-}
-
-// Function which will call itself over and over at a fixed rate until a breakout point
-function doAnimation(name) {
-	function cycle() {
-		setTimeout(doAnimation, 1000/60, name); // 60 fps target, may be rounded by the browser
-	}
 	
-	switch (name) {
-		
-		case "tensionUpdate":
-			const tensionStep = 1.5;
-			
-			if (gameData.tensionReleased) {
-				gameData.tensionHandleOffset[1] += tensionStep;
-			} else {
-				gameData.tensionHandleOffset[1] -= tensionStep;
-			}
-			
-			gameData.tensionHandleOffset[1] = clamp(gameData.tensionHandleClamp[1][0], gameData.tensionHandleOffset[1], gameData.tensionHandleClamp[1][1]);
-			
-			if (gameData.tensionHandleOffset[1] != gameData.tensionHandleClamp[1][0] && 
-			    gameData.tensionHandleOffset[1] != gameData.tensionHandleClamp[1][1]
-			) {
-				// Cycle if not at either end of the bounds
-				cycle();
-			}
-			
-			break;
-		
-		
-		case "turnCore":
-			const turnStep         = -4;
-			const tensionHandleMax = -95;
-			const pickHandleMax    = -235;
-			
-			gameData.pickHandleOffset[1]    = Math.max(pickHandleMax,    gameData.pickHandleOffset[1]    + turnStep);
-			gameData.tensionHandleOffset[1] = Math.max(tensionHandleMax, gameData.tensionHandleOffset[1] + turnStep);
-			
-			if (gameData.tensionHandleOffset[1] !== tensionHandleMax) {
-				cycle();
-			} else {
-				setTimeout(doAnimation, 600, "fadeOut");
-			}
-			
-			break;
-		
-		
-		case "fadeOut":
-			const fadeStep = 15;
-			const fadeMax  = 180;
-			
-			gameData.endFade = Math.min(gameData.endFade + fadeStep, fadeMax);
-			
-			if (gameData.endFade !== fadeMax) {
-				cycle();
-			} else {
-				gameData.gameState = "end";
-			}
-			
-			break;
-	}
+	gameData.previousFrameTime = performance.now();
 }
 
 // Accept fresh input data from mouse/keyboard or touch events about movement
@@ -768,7 +775,7 @@ function inputTension(tensionReleased) {
 		gameData.tensionReleased = tensionReleased;
 		
 		// Run the animation
-		doAnimation("tensionUpdate");
+		activeAnimations.add("tensionUpdate");
 		
 		if (gameData.tensionReleased) {
 			// Without tension, all disk bounds are set to default
@@ -781,7 +788,7 @@ function inputTension(tensionReleased) {
 				// Winner!
 				gameData.endTime = performance.now();
 				gameData.gameState = "ending";
-				doAnimation("turnCore");
+				activeAnimations.add("turnCore");
 			}
 		}
 	}
