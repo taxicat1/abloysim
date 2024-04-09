@@ -387,12 +387,22 @@ const activeAnimations = new Set();
 const animations = {
 	"tensionUpdate" : function(msSincePrevFrame) {
 		const tensionStep = 0.09 * (gameData.tensionReleased ? 1 : -1) * msSincePrevFrame;
+		
 		gameData.tensionHandleOffset[1] += tensionStep;
 		gameData.tensionHandleOffset[1] = clamp(gameData.tensionHandleClamp[1][0], gameData.tensionHandleOffset[1], gameData.tensionHandleClamp[1][1]);
 		
-		if (gameData.tensionHandleOffset[1] === gameData.tensionHandleClamp[1][0] || 
-			gameData.tensionHandleOffset[1] === gameData.tensionHandleClamp[1][1]
-		) {
+		// Reached fully tensioned state
+		if (!gameData.tensionReleased && gameData.tensionHandleOffset[1] === gameData.tensionHandleClamp[1][0]) {
+			if (gameData.gameState === "ending") {
+				// Winner
+				activeAnimations.add("turnCore");
+			}
+			
+			return false;
+		}
+		
+		// Reached fully released state
+		if (gameData.tensionReleased && gameData.tensionHandleOffset[1] === gameData.tensionHandleClamp[1][1]) {
 			return false;
 		}
 		
@@ -408,7 +418,7 @@ const animations = {
 		gameData.tensionHandleOffset[1] = Math.max(tensionHandleMax, gameData.tensionHandleOffset[1] + turnStep);
 		
 		if (gameData.tensionHandleOffset[1] === tensionHandleMax) {
-			setTimeout(function(){activeAnimations.add("fadeOut");}, 600);
+			setTimeout(function(){ activeAnimations.add("fadeOut"); }, 600);
 			return false;
 		}
 		
@@ -432,6 +442,7 @@ const animations = {
 
 function doAnimations() {
 	let msSincePrevFrame = performance.now() - gameData.previousFrameTime;
+	
 	activeAnimations.forEach(animationName => {
 		if (animations.hasOwnProperty(animationName)) {
 			let loop = animations[animationName].apply(this, [ msSincePrevFrame ]);
@@ -584,7 +595,7 @@ function drawFrame() {
 	// If game is over, draw the end screen text
 	// This should only happen once before the gameLoop stops calling for new frames
 	// TODO maybe screen text generalized out?
-	// gameData.screenText = []; { textContent, font, xOffset, yOffset }
+	// gameData.screenText = []; { textContent, font, fillStyle, xOrigin, yOrigin, justification }
 	if (gameData.gameState === "end") {
 		
 		function fillTextCentered(text, offsetY) {
@@ -787,8 +798,10 @@ function inputTension(tensionReleased) {
 			if (!recalculateDiskBinds()) {
 				// Winner!
 				gameData.endTime = performance.now();
+				
+				// Changing the gameState blocks further input, and causes the tensionUpdate 
+				// animation to chain to the turnCore animation, triggering the end of the game
 				gameData.gameState = "ending";
-				activeAnimations.add("turnCore");
 			}
 		}
 	}
