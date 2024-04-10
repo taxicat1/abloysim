@@ -440,7 +440,7 @@ const animations = {
 	},
 };
 
-function doAnimations() {
+function tickAnimations() {
 	let msSincePrevFrame = performance.now() - gameData.previousFrameTime;
 	
 	activeAnimations.forEach(animationName => {
@@ -468,7 +468,7 @@ function drawFrame() {
 	const overlayAlpha = 0.72;
 	
 	ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-	doAnimations();
+	tickAnimations();
 	
 	// Drawing game objects translated to the picking position
 	doCanvasWork(() => {
