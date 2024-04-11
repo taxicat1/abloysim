@@ -109,7 +109,7 @@ async function loadImgs(callback) {
 		callback.apply(window);
 		return;
 	}
-
+	
 	
 	let imgPromises = [];
 	
@@ -385,6 +385,7 @@ function initGame(randomSeed) {
 	loadImgs(gameLoop);
 }
 
+// Add win screen text to gameData.screenText
 function addWinText() {
 	gameData.screenText.set("endOpen", {
 		content       : "Open!",
@@ -493,6 +494,7 @@ const animations = {
 	},
 };
 
+// Call each active animation with delta time
 function tickAnimations(msSincePrevFrame) {
 	gameData.activeAnimations.forEach(animationName => {
 		if (animations.hasOwnProperty(animationName)) {
@@ -504,6 +506,7 @@ function tickAnimations(msSincePrevFrame) {
 	});
 }
 
+// Record the sample of the current frame start time, calculate fps, and create screenText entry
 function tickFps(thisFrameStartTime) {
 	gameData.fpsSamples[gameData.fpsSamplesIndex] = thisFrameStartTime;
 	
