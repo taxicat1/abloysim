@@ -17,13 +17,13 @@ const gameData = {
 	
 	// ========== Immutable stuff below here ========== //
 	imgSrcs : {
-		"pick_handle"            : "images/pick_handle.png", 
-		"pick_handle_mask"       : "images/pick_handle_mask.png", 
-		"pick_handle_overlay"    : "images/pick_handle_overlay.png", 
+		"pick_handle"            : "images/pick_handle.png",
+		"pick_handle_mask"       : "images/pick_handle_mask.png",
+		"pick_handle_overlay"    : "images/pick_handle_overlay.png",
 		
-		"tension_handle"         : "images/tension_handle.png", 
-		"tension_handle_mask"    : "images/tension_handle_mask.png", 
-		"tension_handle_overlay" : "images/tension_handle_overlay.png", 
+		"tension_handle"         : "images/tension_handle.png",
+		"tension_handle_mask"    : "images/tension_handle_mask.png",
+		"tension_handle_overlay" : "images/tension_handle_overlay.png",
 		"tension_arm"            : "images/tension_arm.png",
 		
 		"pick_arm"               : "images/pick_arm.png",
@@ -309,8 +309,8 @@ function initGame(randomSeed) {
 		
 		let disk = {
 			'gates'    : gates,
-			'position' : gameData.gateOrigins[0],        // Position (rotation) of the disk starts on 0
-			'bounds'   : [...gameData.diskDefaultBounds] // Clamp to the disk's position based on current binding state
+			'position' : gameData.gateOrigins[0],         // Position (rotation) of the disk starts on 0
+			'bounds'   : [...gameData.diskDefaultBounds], // Clamp to the disk's position based on current binding state
 		};
 		
 		return disk;
@@ -418,7 +418,7 @@ function addWinText() {
 	});
 	
 	// Determine win time
-	let ds = (gameData.endTime - gameData.startTime) / 1000
+	let ds = (gameData.endTime - gameData.startTime) / 1000;
 	let minutes = Math.floor(ds / 60).toString();
 	let seconds = (ds % 60).toFixed(3);
 	
@@ -596,7 +596,7 @@ function drawFrame() {
 		
 		// Tension handle
 		doCanvasWork(() => {
-			ctx.globalCompositeOperation = "source-atop"
+			ctx.globalCompositeOperation = "source-atop";
 			ctx.drawImage(
 				gameData.imgs["tension_handle"], 
 				gameData.tensionHandleOrigin[0], 
@@ -609,7 +609,7 @@ function drawFrame() {
 			/* Annoyingly, you cannot do overlay AND source-atop together, so the overlay must be pre-masked to the mask.
 			   You could just use the overlay AS your mask, but this eliminates the possibility of having transparent regions
 			   within the overlay. Even though this is not the case here, the overlay and the mask are left separate. */
-			ctx.globalCompositeOperation = "overlay"
+			ctx.globalCompositeOperation = "overlay";
 			ctx.globalAlpha = overlayAlpha;
 			ctx.drawImage(
 				gameData.imgs["tension_handle_overlay"], 
@@ -621,7 +621,7 @@ function drawFrame() {
 		
 		// Pick handle
 		doCanvasWork(() => {
-			ctx.globalCompositeOperation = "source-atop"
+			ctx.globalCompositeOperation = "source-atop";
 			ctx.drawImage(
 				gameData.imgs["pick_handle"], 
 				gameData.pickHandleOrigin[0] + gameData.pickHandleOffset[0], 
@@ -631,7 +631,7 @@ function drawFrame() {
 		
 		// Pick handle overlay
 		doCanvasWork(() => {
-			ctx.globalCompositeOperation = "overlay"
+			ctx.globalCompositeOperation = "overlay";
 			ctx.globalAlpha = overlayAlpha;
 			ctx.drawImage(
 				gameData.imgs["pick_handle_overlay"], 
@@ -902,7 +902,7 @@ const mouseAndKeyboardData = {
 	tensionKeyIds      : new Set([ 13, 16, 17, 32 ]), // Enter, Shift, Ctrl, Space
 	
 	tensionActiveKeys  : new Set(),
-	mouseButtonPressed : false
+	mouseButtonPressed : false,
 };
 
 function updateMouseAndKeyboardInput(e) {
@@ -938,9 +938,9 @@ function updateMouseAndKeyboardInput(e) {
 const touchData = {
 	tensionerTouchRegion       : [800, 50, 950, 450], // x1, y1, x2, y2 of tensioner touch zone
 	
-	primaryTouchId             : null,     // Identifier of touch currently controlling picking
-	previousPrimaryTouchOffset : [0, 0],   // Previous location of above for tracking movement over time
-	tensionerTouchIds          : new Set() // Set of touches that are tension-releasing touches; at least 1 in set means tension released
+	primaryTouchId             : null,      // Identifier of touch currently controlling picking
+	previousPrimaryTouchOffset : [0, 0],    // Previous location of above for tracking movement over time
+	tensionerTouchIds          : new Set(), // Set of touches that are tension-releasing touches; at least 1 in set means tension released
 };
 
 function updateTouchInput(e) {
