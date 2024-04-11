@@ -76,10 +76,15 @@ const gameData = {
 	
 	tensionReleased : false,
 	
+	useDarkTheme : window.matchMedia("(prefers-color-scheme: dark)").matches,
+	
 	startTime : null,
 	endTime   : null,
 	
-	previousFrameTime : null,
+	screenText       : new Map(),
+	activeAnimations : new Set(),
+	
+	previousFrameStartTime : null,
 	
 	endFade : 0,
 	
@@ -354,7 +359,10 @@ function initGame(randomSeed) {
 	gameData.tensionHandleOffset = [...gameData.tensionHandleOffsetDefault];
 	gameData.randomSeed          = randomSeed;
 	
-	activeAnimations.clear();
+	gameData.screenText.clear();
+	gameData.activeAnimations.clear();
+	
+	ctx.reset();
 	
 	// Reset and shuffle binding order arrays
 	for (let i = 0; i < gameData.bindingOrder1.length; i++) {
@@ -380,8 +388,54 @@ function initGame(randomSeed) {
 	loadImgs(gameLoop);
 }
 
-// Animations, which will use the time since the previously rendered frame to move something
-const activeAnimations = new Set();
+function addWinText() {
+	gameData.screenText.set("endOpen", {
+		content       : "Open!",
+		fillStyle     : "#231f20",
+		fillStyleDark : "#cccccc",
+		font          : "300 65px Roboto, sans-serif",
+		origin        : [500, 150],
+		justify       : "center",
+	});
+	
+	// Gather bitting into a string
+	let bitting = "0";
+	for (let disk of gameData.disks) {
+		bitting += disk.gates.indexOf(2);
+	}
+	
+	gameData.screenText.set("endBitting", {
+		content       : `Bitting: ${bitting}`,
+		fillStyle     : "#231f20",
+		fillStyleDark : "#cccccc",
+		font          : "20px Roboto, sans-serif",
+		origin        : [500, 240],
+		justify       : "center",
+	});
+	
+	// Determine win time
+	let ds = (gameData.endTime - gameData.startTime) / 1000
+	let minutes = Math.floor(ds / 60).toString();
+	let seconds = (ds % 60).toFixed(3);
+	
+	gameData.screenText.set("endPickTime", {
+		content       : `Picked in: ${minutes}m ${seconds}s`,
+		fillStyle     : "#231f20",
+		fillStyleDark : "#cccccc",
+		font          : "20px Roboto, sans-serif",
+		origin        : [500, 270],
+		justify       : "center",
+	});
+	
+	gameData.screenText.set("endRestart", {
+		content       : "Click or tap to restart",
+		fillStyle     : "#231f20",
+		fillStyleDark : "#cccccc",
+		font          : "16px Roboto, sans-serif",
+		origin        : [500, 365],
+		justify       : "center",
+	});
+}
 
 // Each animation returns a bool if it should continue to run in the next frame
 const animations = {
@@ -395,7 +449,7 @@ const animations = {
 		if (!gameData.tensionReleased && gameData.tensionHandleOffset[1] === gameData.tensionHandleClamp[1][0]) {
 			if (gameData.gameState === "ending") {
 				// Winner
-				activeAnimations.add("turnCore");
+				gameData.activeAnimations.add("turnCore");
 			}
 			
 			return false;
@@ -418,7 +472,8 @@ const animations = {
 		gameData.tensionHandleOffset[1] = Math.max(tensionHandleMax, gameData.tensionHandleOffset[1] + turnStep);
 		
 		if (gameData.tensionHandleOffset[1] === tensionHandleMax) {
-			setTimeout(function(){ activeAnimations.add("fadeOut"); }, 600);
+			// Timeout here not needed to be precise, just dramatic pause
+			setTimeout(function(){ gameData.activeAnimations.add("fadeOut"); }, 600);
 			return false;
 		}
 		
@@ -433,6 +488,7 @@ const animations = {
 		
 		if (gameData.endFade === fadeMax) {
 			gameData.gameState = "end";
+			addWinText();
 			return false;
 		}
 		
@@ -440,17 +496,36 @@ const animations = {
 	},
 };
 
-function tickAnimations() {
-	let msSincePrevFrame = performance.now() - gameData.previousFrameTime;
-	
-	activeAnimations.forEach(animationName => {
+function tickAnimations(msSincePrevFrame) {
+	gameData.activeAnimations.forEach(animationName => {
 		if (animations.hasOwnProperty(animationName)) {
 			let loop = animations[animationName].apply(this, [ msSincePrevFrame ]);
 			if (!loop) {
-				activeAnimations.delete(animationName);
+				gameData.activeAnimations.delete(animationName);
 			}
 		}
 	});
+}
+
+function tickFps(thisFrameStartTime) {
+	gameData.fpsSamples[gameData.fpsSamplesIndex] = thisFrameStartTime;
+	
+	let next = (gameData.fpsSamplesIndex + 1) % gameData.fpsSamplesMax;
+	let deltaTime = gameData.fpsSamples[gameData.fpsSamplesIndex] - gameData.fpsSamples[next];
+	// Subtract 1 here due to fenceposting
+	let fps = (1000 * (gameData.fpsSamplesMax - 1)) / deltaTime;
+	
+	gameData.fpsSamplesIndex = next;
+	
+	if (!isNaN(fps)) {
+		gameData.screenText.set("fps", {
+			content   : `${fps.toFixed(2)} fps`,
+			fillStyle : "black",
+			font      : "10px sans-serif",
+			origin    : [1, 10],
+			justify   : "left",
+		});
+	}
 }
 
 // Draws frame to canvas using data in gameData
@@ -467,8 +542,28 @@ function drawFrame() {
 	
 	const overlayAlpha = 0.72;
 	
+	// Clear canvas
 	ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-	tickAnimations();
+	
+	// Mark the start of this frame and time since start of previous frame
+	let thisFrameStartTime = performance.now();
+	let msSincePrevFrame = thisFrameStartTime - gameData.previousFrameStartTime;
+	gameData.previousFrameStartTime = thisFrameStartTime;
+	
+	// Debug fps
+	if (gameData.showFps) {
+		tickFps(thisFrameStartTime);
+	} else {
+		if (gameData.screenText.has("fps")) {
+			gameData.screenText.delete("fps");
+		}
+	}
+	
+	// Start with canvas work for this frame
+	
+	// Tick animations
+	tickAnimations(msSincePrevFrame);
+	
 	
 	// Drawing game objects translated to the picking position
 	doCanvasWork(() => {
@@ -585,70 +680,48 @@ function drawFrame() {
 	// End fade screen effect
 	if (gameData.endFade !== 0) {
 		doCanvasWork(() => {
+			const endFadeFillStyle     = "#ffffff";
+			const endFadeFillStyleDark = "#242424";
+			
 			ctx.globalAlpha = gameData.endFade / 255;
-			ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--color-bg");
+			
+			if (gameData.useDarkTheme) {
+				ctx.fillStyle = endFadeFillStyleDark;
+			} else {
+				ctx.fillStyle = endFadeFillStyle;
+			}
+			
 			ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 		});
 	}
 	
 	
-	// If game is over, draw the end screen text
-	// This should only happen once before the gameLoop stops calling for new frames
-	// TODO maybe screen text generalized out?
-	// gameData.screenText = []; { textContent, font, fillStyle, xOrigin, yOrigin, justification }
-	if (gameData.gameState === "end") {
-		
-		function fillTextCentered(text, offsetY) {
-			let textWidth = ctx.measureText(text).width;
-			let offsetX = (ctx.canvas.width - textWidth) / 2;
-			ctx.fillText(text, offsetX, offsetY);
-		}
-		
-		// Gather bitting into a string
-		let bitting = "0";
-		for (let disk of gameData.disks) {
-			bitting += disk.gates.indexOf(2);
-		}
-		
-		// Determine win time
-		let ds = (gameData.endTime - gameData.startTime) / 1000
-		let minutes = Math.floor(ds / 60).toString();
-		let seconds = (ds % 60).toFixed(3);
-		let winTime = `${minutes}m ${seconds}s`;
-		
-		// Write text to canvas
+	// Screen text
+	for (let [ name, text ] of gameData.screenText) {
 		doCanvasWork(() => {
-			ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--color-text");
+			ctx.font = text.font;
 			
-			ctx.font = "300 65px Roboto, sans-serif";
-			fillTextCentered("Open!", 150);
+			if (gameData.useDarkTheme && text.hasOwnProperty("fillStyleDark")) {
+				ctx.fillStyle = text.fillStyleDark;
+			} else {
+				ctx.fillStyle = text.fillStyle;
+			}
 			
-			ctx.font = "20px Roboto, sans-serif";
-			fillTextCentered(`Bitting: ${bitting}`, 240);
-			fillTextCentered(`Picked in: ${winTime}`, 270);
+			let x = text.origin[0];
+			let y = text.origin[1];
 			
-			ctx.font = "16px Roboto, sans-serif";
-			fillTextCentered("Click or tap to restart", 365);
+			let textWidth = ctx.measureText(text.content).width;
+			
+			switch (text.justify) {
+				case "left":    break;
+				case "right":   x -= textWidth;  break;
+				case "center":  x -= textWidth / 2;  break;
+			}
+			
+			ctx.fillText(text.content, x, y);
 		});
 	}
 	
-	// Debug fps
-	if (gameData.showFps) {
-		gameData.fpsSamples[gameData.fpsSamplesIndex] = performance.now();
-		
-		let next = (gameData.fpsSamplesIndex + 1) % gameData.fpsSamplesMax;
-		let deltaTime = gameData.fpsSamples[gameData.fpsSamplesIndex] - gameData.fpsSamples[next];
-		// Subtract 1 here due to fenceposting
-		let fps = (1000 * (gameData.fpsSamplesMax - 1)) / deltaTime;
-		
-		gameData.fpsSamplesIndex = next;
-		
-		if (!isNaN(fps)) {
-			ctx.fillText(`${fps.toFixed(2)} fps`, 1, 10);
-		}
-	}
-	
-	gameData.previousFrameTime = performance.now();
 }
 
 // Accept fresh input data from mouse/keyboard or touch events about movement
@@ -786,7 +859,7 @@ function inputTension(tensionReleased) {
 		gameData.tensionReleased = tensionReleased;
 		
 		// Run the animation
-		activeAnimations.add("tensionUpdate");
+		gameData.activeAnimations.add("tensionUpdate");
 		
 		if (gameData.tensionReleased) {
 			// Without tension, all disk bounds are set to default
@@ -812,8 +885,7 @@ function gameLoop() {
 	drawFrame();
 	
 	if (gameData.gameState !== "end") {
-		requestAnimationFrame(gameLoop);  // Capped fps
-		//setTimeout(gameLoop, 0);        // Uncapped fps (probably bad, performance issues)
+		requestAnimationFrame(gameLoop);
 	} else {
 		unfocusGame();
 	}
@@ -984,4 +1056,9 @@ c.addEventListener("touchmove",   updateTouchInput);
 c.addEventListener("touchcancel", updateTouchInput);
 
 // Extra feature: rerender the current frame (even if not in game loop) when toggling light and dark mode
-window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawFrame);
+function colorModeChange(event) {
+	gameData.useDarkTheme = event.matches;
+	drawFrame();
+}
+
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", colorModeChange);
