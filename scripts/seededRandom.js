@@ -7,6 +7,8 @@
 	Implementation is a basic and lazy Xor-Shift generator.
 */
 
+"use strict";
+
 function generateSeed() {
 	return Math.floor(Math.random() * 0x100000000);
 }

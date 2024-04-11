@@ -4,6 +4,7 @@
 	Used to read and write to local storage for the movement sensitivity option.
 */
 
+"use strict";
 
 const sens = document.getElementById("sens");
 const sensDisplay = document.getElementById("sensdisplay");

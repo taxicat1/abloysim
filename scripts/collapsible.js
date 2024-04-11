@@ -4,6 +4,8 @@
 	Only used for the collapse function of the instructions panel.
 */
 
+"use strict";
+
 let collapseElements = document.getElementsByClassName("collapsible-container");
 for (let e of collapseElements) {
 	let target  = e.getElementsByClassName("collapsible")[0];

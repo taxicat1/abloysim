@@ -5,6 +5,8 @@
 	to much benefit with only one game instance created per page.
 */
 
+"use strict";
+
 const c = document.getElementById("c");
 const ctx = c.getContext("2d");
 
@@ -221,13 +223,17 @@ function initGame(randomSeed) {
 	let rand = new SeededRandom(randomSeed);
 	
 	function makeDisk(trueGatePosition, noFalses) {
-		const NO_GATE    = O = 0;
-		const FALSE_GATE = H = 1;
-		const TRUE_GATE  = U = 2;
+		const NO_GATE    = 0;
+		const FALSE_GATE = 1;
+		const TRUE_GATE  = 2;
 		
 		// Currently unimplemented
 		// O,H,U shorthand to make this less messy, and they sort of look like the gate shape
 		// TODO: this is almost certainly inaccurate to reality. Research false disk placement.
+		const O = NO_GATE;
+		const H = FALSE_GATE;
+		const U = TRUE_GATE;
+		
 		const gatePattern = [
 			[ // Gate arrangements for true gate 0
 				[ U, O, H, O, H, O ],
