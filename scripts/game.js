@@ -104,29 +104,26 @@ function clamp(l, x, h) {
 }
 
 // Loads images into gameData
-function loadImgs(callback) {
+async function loadImgs(callback) {
 	if (gameData.imgsLoaded) {
-		callback();
+		callback.apply(window);
 		return;
 	}
+
 	
-	let loadedImgsCnt = 0;
-	const numImgs = Object.keys(gameData.imgSrcs).length;
+	let imgPromises = [];
 	
-	const loadFunc = function() {
-		loadedImgsCnt++;
-		if (loadedImgsCnt === numImgs) {
-			gameData.imgsLoaded = true;
-			callback();
-		}
-	}
-	
-	for (let i in gameData.imgSrcs) {
+	for (let imgName in gameData.imgSrcs) {
 		let img = new Image();
-		img.onload = loadFunc;
-		img.src = gameData.imgSrcs[i];
-		gameData.imgs[i] = img;
+		img.src = gameData.imgSrcs[imgName];
+		imgPromises.push(img.decode());
+		gameData.imgs[imgName] = img;
 	}
+	
+	await Promise.all(imgPromises);
+	
+	gameData.imgsLoaded = true;
+	callback.apply(window);
 }
 
 // Recomputes the binding status of each disk based on free movement made without tension. Result is updated in gameData.disks[i].bounds
