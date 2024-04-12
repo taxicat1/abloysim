@@ -443,7 +443,7 @@ function addWinText() {
 
 // Each animation returns a bool if it should continue to run in the next frame
 const animations = {
-	"tensionUpdate" : function(msSincePrevFrame) {
+	tensionUpdate : function(msSincePrevFrame) {
 		const tensionStep = 0.09 * (gameData.tensionReleased ? 1 : -1) * msSincePrevFrame;
 		
 		gameData.tensionHandleOffset[1] += tensionStep;
@@ -453,7 +453,7 @@ const animations = {
 		if (!gameData.tensionReleased && gameData.tensionHandleOffset[1] === gameData.tensionHandleClamp[1][0]) {
 			if (gameData.gameState === "ending") {
 				// Winner
-				gameData.activeAnimations.add("turnCore");
+				gameData.activeAnimations.add(animations.turnCore);
 			}
 			
 			return false;
@@ -467,7 +467,7 @@ const animations = {
 		return true;
 	},
 	
-	"turnCore" : function(msSincePrevFrame) {
+	turnCore : function(msSincePrevFrame) {
 		const turnStep         = -0.25 * msSincePrevFrame;
 		const tensionHandleMax = -95;
 		const pickHandleMax    = -235;
@@ -477,14 +477,14 @@ const animations = {
 		
 		if (gameData.tensionHandleOffset[1] === tensionHandleMax) {
 			// Timeout here not needed to be precise, just dramatic pause
-			setTimeout(function(){ gameData.activeAnimations.add("fadeOut"); }, 600);
+			setTimeout(function(){ gameData.activeAnimations.add(animations.fadeOut); }, 600);
 			return false;
 		}
 		
 		return true;
 	},
 	
-	"fadeOut" : function(msSincePrevFrame) {
+	fadeOut : function(msSincePrevFrame) {
 		const fadeStep = 0.8 * msSincePrevFrame;
 		const fadeMax  = 180;
 		
@@ -502,12 +502,10 @@ const animations = {
 
 // Call each active animation with delta time
 function tickAnimations(msSincePrevFrame) {
-	gameData.activeAnimations.forEach(animationName => {
-		if (animations.hasOwnProperty(animationName)) {
-			let loop = animations[animationName].apply(this, [ msSincePrevFrame ]);
-			if (!loop) {
-				gameData.activeAnimations.delete(animationName);
-			}
+	gameData.activeAnimations.forEach(animation => {
+		let loop = animation.apply(this, [ msSincePrevFrame ]);
+		if (!loop) {
+			gameData.activeAnimations.delete(animation);
 		}
 	});
 }
@@ -560,9 +558,7 @@ function drawFrame() {
 	if (gameData.showFps) {
 		tickFps(thisFrameStartTime);
 	} else {
-		if (gameData.screenText.has("fps")) {
-			gameData.screenText.delete("fps");
-		}
+		gameData.screenText.delete("fps");
 	}
 	
 	// Start with canvas work for this frame
@@ -707,7 +703,7 @@ function drawFrame() {
 		doCanvasWork(() => {
 			ctx.font = text.font;
 			
-			if (gameData.useDarkTheme && text.hasOwnProperty("fillStyleDark")) {
+			if (gameData.useDarkTheme && text.fillStyleDark) {
 				ctx.fillStyle = text.fillStyleDark;
 			} else {
 				ctx.fillStyle = text.fillStyle;
@@ -739,14 +735,9 @@ function inputMovement(movementX, movementY) {
 		gameData.startTime = performance.now();
 	}
 	
-	let sensitivity = parseFloat(sens.value);
-	movementX *= sensitivity;
-	movementY *= sensitivity;
-	
 	// Mouse position for the pick handle input
-	let nox = gameData.pickHandleOffset[0] + (movementX || 0);
-	let noy = gameData.pickHandleOffset[1] + (movementY || 0);
-	
+	let nox = gameData.pickHandleOffset[0] + (Number(movementX) || 0);
+	let noy = gameData.pickHandleOffset[1] + (Number(movementY) || 0);
 	
 	// Basic clamping for playable range
 	nox = clamp(gameData.pickHandleClamp[0][0], nox, gameData.pickHandleClamp[0][1]);
@@ -784,7 +775,7 @@ function inputMovement(movementX, movementY) {
 	
 	
 	// Clamping X-movement due to collisions with the side of disks
-	if (movementX != 0) {
+	if (movementX !== 0) {
 		let startDiskPos = determinePickTipPosition(gameData.pickHandleOffset[0]);
 		let endDiskPos   = determinePickTipPosition(nox);
 		
@@ -813,6 +804,7 @@ function inputMovement(movementX, movementY) {
 					// If here the pick tip is not aligned and cannot enter the disk
 					// Pick tip is aligned to the right edge of the disk
 					nox = Math.max(gameData.diskOrigins[i] + gameData.diskWidth + 1, nox);
+					break;
 				}
 			}
 		}
@@ -865,7 +857,7 @@ function inputTension(tensionReleased) {
 		gameData.tensionReleased = tensionReleased;
 		
 		// Run the animation
-		gameData.activeAnimations.add("tensionUpdate");
+		gameData.activeAnimations.add(animations.tensionUpdate);
 		
 		if (gameData.tensionReleased) {
 			// Without tension, all disk bounds are set to default
@@ -915,6 +907,7 @@ function updateMouseAndKeyboardInput(e) {
 				mouseAndKeyboardData.tensionActiveKeys.add(e.keyCode);
 				inputTension(true);
 			}
+			
 			break;
 		
 		case "keyup":
@@ -923,7 +916,8 @@ function updateMouseAndKeyboardInput(e) {
 			break;
 		
 		case "mousemove":
-			inputMovement(e.movementX, e.movementY);
+			let sensitivity = parseFloat(sens.value);
+			inputMovement(sensitivity * e.movementX, sensitivity * e.movementY);
 			break;
 		
 		case "mousedown":
@@ -982,13 +976,15 @@ function updateTouchInput(e) {
 			
 			case "touchmove":
 				if (touch.identifier === touchData.primaryTouchId) {
-					let movementX = touch.clientX - touchData.previousPrimaryTouchOffset[0];
-					let movementY = touch.clientY - touchData.previousPrimaryTouchOffset[1];
+					let sensitivity = parseFloat(sens.value);
+					let movementX = sensitivity * (touch.clientX - touchData.previousPrimaryTouchOffset[0]);
+					let movementY = sensitivity * (touch.clientY - touchData.previousPrimaryTouchOffset[1]);
 					
 					inputMovement(movementX, movementY);
 					
 					touchData.previousPrimaryTouchOffset = [ touch.clientX, touch.clientY ];
 				}
+				
 				break;
 			
 			
@@ -998,10 +994,8 @@ function updateTouchInput(e) {
 					touchData.primaryTouchId = null;
 				}
 				
-				if (touchData.tensionerTouchIds.has(touch.identifier)) {
-					touchData.tensionerTouchIds.delete(touch.identifier);
-					inputTension(touchData.tensionerTouchIds.size !== 0);
-				}
+				touchData.tensionerTouchIds.delete(touch.identifier);
+				inputTension(touchData.tensionerTouchIds.size !== 0);
 				
 				break;
 		}
