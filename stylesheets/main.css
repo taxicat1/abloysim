@@ -67,6 +67,12 @@ a, a:visited {
 	text-align: center;
 }
 
+#error-banner, noscript {
+	color: red;
+	font-size: 120%;
+	margin: 20px;
+}
+
 #c {
 	box-shadow: 0 0 10px var(--color-shadow);
 }

@@ -19,6 +19,12 @@
 <body>
 <h1>Abloy Classic picking simulator</h1>
 
+<noscript>JavaScript is required for the simulator to function.</noscript>
+<div id="error-banner" style="display:none">
+	<div>An error was encountered while running the simulator. Try to refresh the page and try again; if this persists, the simulator may not work correctly in this browser.</div>
+	<div>Technical details of the error: <span id="error-details"></span></div>
+</div>
+
 <div class="collapsible-container" style="max-width:1000px; margin:auto">
 	<div role="button" class="collapse-button" collapsed="false">Instructions</div>
 	<div class="collapsible">
@@ -46,7 +52,38 @@
 	</p>
 </div>
 
+<!-- Global error handler -->
+<script>
+"use strict";
 
+function errorHandle(event) {
+	// Get and show the error
+	let details = event.reason || event.message || event.toString();
+	
+	document.getElementById("error-details").textContent = details;
+	document.getElementById("error-banner").style.display = "block";
+	
+	// Unfocus the game if able
+	if (window.unfocusGame) {
+		window.unfocusGame();
+	}
+	
+	// Disable pointer events with CSS to disable the game, if able
+	if (c && c.style) {
+		c.style.pointerEvents = "none";
+	}
+	
+	// Needed for very old window.onerror calls
+	return true;
+}
+
+if (window.addEventListener) {
+	window.addEventListener("error", errorHandle);
+	window.addEventListener("unhandledrejection", errorHandle);
+} else {
+	window.onerror = errorHandle;
+}
+</script>
 <script src="scripts/collapsible.js"></script>
 <script src="scripts/sens.js"></script>
 <script src="scripts/seededRandom.js"></script>
