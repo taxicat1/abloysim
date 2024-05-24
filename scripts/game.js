@@ -365,7 +365,7 @@ function initGame(randomSeed) {
 	gameData.screenText.clear();
 	gameData.activeAnimations.clear();
 	
-	ctx.reset();
+	ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 	
 	// Reset and shuffle binding order arrays
 	for (let i = 0; i < gameData.bindingOrder1.length; i++) {
