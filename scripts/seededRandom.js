@@ -32,7 +32,7 @@ class SeededRandom {
 	}
 	
 	random() {
-		return this.randInt() / 0xFFFFFFFF;
+		return this.randInt() / 0x100000000;
 	}
 	
 	randIntRange(min, max) {
