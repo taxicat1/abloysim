@@ -18,11 +18,11 @@
 	cursor: pointer;
 }
 
-.collapse-button[collapsed=false], .collapse-button[collapsed=true]:hover {
+.collapse-button[data-collapsed=false], .collapse-button[data-collapsed=true]:hover {
 	background: var(--color-panel);
 }
 
-.collapse-button[collapsed=true], .collapse-button[collapsed=false]:hover {
+.collapse-button[data-collapsed=true], .collapse-button[data-collapsed=false]:hover {
 	background: var(--color-panel-hover);
 }
 
@@ -34,10 +34,10 @@
 	margin: 0 8px 0 4px;
 }
 
-.collapse-button[collapsed=true]:before {
+.collapse-button[data-collapsed=true]:before {
 	background-image: var(--icon-caret-down);
 }
 
-.collapse-button[collapsed=false]:before {
+.collapse-button[data-collapsed=false]:before {
 	background-image: var(--icon-caret-right);
 }

@@ -14,11 +14,11 @@ for (let e of collapseElements) {
 	target.style.maxHeight = target.scrollHeight + "px";
 	
 	trigger.addEventListener("click", function() {
-		if (trigger.getAttribute("collapsed") === "true") {
-			trigger.setAttribute("collapsed", "false");
+		if (trigger.dataset.collapsed === "true") {
+			trigger.dataset.collapsed = "false";
 			target.style.maxHeight = target.scrollHeight + "px";
 		} else {
-			trigger.setAttribute("collapsed", "true");
+			trigger.dataset.collapsed = "true";
 			target.style.maxHeight = 0;
 		}
 	});
