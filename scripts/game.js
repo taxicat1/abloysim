@@ -938,12 +938,16 @@ const touchData = {
 };
 
 function updateTouchInput(e) {
+	e.preventDefault();
+	
 	if (gameData.gameState === "end") {
-		// Do not prevent default here for resetting
+		// Reset here
+		if (e.type === "touchstart") {
+			initGame();
+		}
+		
 		return;
 	}
-	
-	e.preventDefault();
 	
 	// Only one touch at a time may control the pick tip movement, subsequent ones will be ignored
 	// However, any number of touches on the tensioner are fine for releasing tension.
