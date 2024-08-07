@@ -10,7 +10,12 @@
 "use strict";
 
 function generateSeed() {
-	return Math.floor(Math.random() * 0x100000000);
+	let seed;
+	do {
+		seed = Math.floor(Math.random() * 0x100000000);
+	} while (seed === 0);
+	
+	return seed;
 }
 
 class SeededRandom {
@@ -19,15 +24,19 @@ class SeededRandom {
 	}
 	
 	seed(s) {
-		this.state = s || generateSeed();
+		s >>>= 0; /* Cast to u32 */
+		if (s === 0) {
+			s = generateSeed();
+		}
+		
+		this.state = s;
 	}
 	
 	randInt() {
 		this.state ^= this.state << 13;
 		this.state ^= this.state >>> 7;
 		this.state ^= this.state << 17;
-		this.state &= 0xFFFFFFFF;
-		this.state >>>= 0; /* Cast to unsigned */
+		this.state >>>= 0; /* Cast to u32 */
 		return this.state;
 	}
 	
