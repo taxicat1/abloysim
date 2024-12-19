@@ -7,7 +7,7 @@
 "use strict";
 
 const sens = document.getElementById("sens");
-const sensDisplay = document.getElementById("sensdisplay");
+const sensDisplay = document.getElementById("sens-display");
 
 function readSens() {
 	let s = parseFloat(localStorage.getItem("sens"));

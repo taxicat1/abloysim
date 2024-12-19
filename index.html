@@ -1,6 +1,6 @@
 <!doctype html>
 <html>
-	<!-- 
+	<!--
 		Ornamental design of picking tool shown is intellectual property of Jaakko Fagerlund
 	-->
 	<head>
@@ -21,35 +21,54 @@
 		<h1>Abloy Classic picking simulator</h1>
 		
 		<noscript>JavaScript is required for the simulator to function.</noscript>
-		<div id="error-banner" style="display:none">
+		<div id="error-banner" style="display: none;">
 			<div>An error was encountered while running the simulator. Try to refresh the page and try again; if this persists, the simulator may not work correctly in this browser.</div>
 			<div>Technical details of the error: <span id="error-details"></span></div>
 		</div>
 		
-		<div class="collapsible-container" style="max-width:1000px; margin:auto">
+		<div class="collapsible-container" style="max-width: 1000px; margin: auto;">
 			<div role="button" class="collapse-button" data-collapsed="false">Instructions</div>
 			<div class="collapsible">
 				<ul style="margin: 15px 0;">
 					<li>Click on the game to focus it. Press Esc to unfocus. Works on desktop and mobile on modern browsers.</li>
 					<li>Move the mouse around or touch and drag to turn and slide the pick tip.</li>
-					<li>Heavy tension is applied by default. Press and hold Left click, Shift, Ctrl, or Enter, or touch the tensioner on a touch device, to release tension some. With tension released you can move the disks around.</li>
+					<li>Heavy tension is applied by default. Press and hold Left click, Shift, Ctrl, or Enter, or touch the right side of the screen on a touch device, to release tension some. With tension released you can move the disks around.</li>
 					<li>False gates, when binding, have less jiggle to them than true gates.</li>
 					<li>Unlike real Abloys which bind mostly back to front, the simulation is totally random.</li>
 					<li>The bitting follows the factory pattern: 005XXXXXXX0 with the same cut unable to appear three times in a row. The rearmost 0 disk is being tensioned off of.</li>
-					<li>If you're stuck, a video tutorial is <a target="_blank" href="https://www.youtube.com/watch?v=WtH8eWWQDIQ">available here</a>.</li>
+					<li>If you're stuck, you can turn on cutaway mode, and a video tutorial is <a target="_blank" href="https://www.youtube.com/watch?v=WtH8eWWQDIQ">available here</a>.</li>
 				</ul>
 			</div>
 		</div>
 		
 		<div id="container">
-			<canvas id="c" width="1000" height="500"></canvas>
-			<div id="sens-container">
+			<div id="viewport">
+				<canvas width="1000" height="500"></canvas>
+				<canvas width="1000" height="500"></canvas>
+				<canvas width="1000" height="500"></canvas>
+				<canvas width="1000" height="500"></canvas>
+				<canvas width="1000" height="500"></canvas>
+				<canvas width="1000" height="500"></canvas>
+				<canvas width="1000" height="500"></canvas>
+				<canvas width="1000" height="500"></canvas>
+			</div>
+			
+			<div id="settings-container">
 				<span>Movement sensitivity:</span>
-				<input id ="sens" type="range" min="0.01" max="2.0" step="0.01" value="1.0" list="sens-detents"/>
-				<span id="sensdisplay">100%</span>
-				<datalist id="sens-detents">
-					<option value="1.0">
-				</datalist>
+				<label class="slider-container">
+					<input id="sens" type="range" min="0.01" max="2.0" step="0.01" value="1.0" list="sens-detents" />
+					<datalist id="sens-detents">
+						<option value="1.0">
+					</datalist>
+				
+					<span id="sens-display" style="width: 3em; text-align: center;">100%</span>
+				</label>
+				
+				<span>Cheat?</span>
+				<label>
+					<input id="show-cutaway-checkbox" type="checkbox" checked="false" />
+					Show cutaway
+				</label>
 			</div>
 		</div>
 		
@@ -69,10 +88,8 @@
 					window.unfocusGame();
 				}
 				
-				// Disable pointer events with CSS to disable the game, if able
-				if (c && c.style) {
-					c.style.pointerEvents = "none";
-				}
+				// Disable pointer events with CSS to disable the game
+				document.getElementById("viewport").style.pointerEvents = "none";
 				
 				// Needed for very old window.onerror calls
 				return true;
@@ -90,6 +107,5 @@
 		<script src="scripts/sens.js"></script>
 		<script src="scripts/seededRandom.js"></script>
 		<script src="scripts/game.js"></script>
-		<script>initGame();</script>
 	</body>
 </html>
