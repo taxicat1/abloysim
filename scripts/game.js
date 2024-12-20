@@ -65,8 +65,9 @@
 			"cutaway_disk"           : "images/cutaway_disk.png",
 			"cutaway_true_gate"      : "images/cutaway_true_gate.png",
 			"cutaway_false_gate"     : "images/cutaway_false_gate.png",
-			"cutaway_overlay"        : "images/cutaway_overlay.png",
-			"cutaway_sidebar"        : "images/cutaway_sidebar.png"
+			"cutaway_disks_overlay"  : "images/cutaway_disks_overlay.png",
+			"cutaway_sidebar"        : "images/cutaway_sidebar.png",
+			"cutaway_overlay"        : "images/cutaway_overlay.png"
 		},
 		
 		// Fixed values of where to start to draw these
@@ -111,6 +112,8 @@
 		// Dynamic values of how far away to draw these from their origin
 		pickHandleOffset    : [0, -160],
 		tensionHandleOffset : [0, -20 ], // Index 0 unused
+		
+		coreRotation : 0,
 		
 		// Disk data
 		disks         : [],                     // Array of disk objects, each with gates, position, and movement limits
@@ -396,6 +399,7 @@
 		gameData.pickingPosition     = [...gameData.pickingPositionDefault];
 		gameData.pickHandleOffset    = [...gameData.pickHandleOffsetDefault];
 		gameData.tensionHandleOffset = [...gameData.tensionHandleOffsetDefault];
+		gameData.coreRotation        = 0;
 		gameData.randomSeed          = randomSeed;
 		gameData.cheater             = false;
 		gameData.showCutaway         = false;
@@ -561,24 +565,25 @@
 		
 		turnCore : function(msSincePrevFrame) {
 			const turnStep         = -0.25 * msSincePrevFrame;
-			const tensionHandleMax = -95;
-			const pickHandleMax    = -235;
+			const coreRotationMax = -75;
 			
-			gameData.pickHandleOffset[1]    = Math.max(pickHandleMax,    gameData.pickHandleOffset[1]    + turnStep);
-			gameData.tensionHandleOffset[1] = Math.max(tensionHandleMax, gameData.tensionHandleOffset[1] + turnStep);
+			gameData.coreRotation = Math.max(gameData.coreRotation + turnStep, coreRotationMax);
 			
 			gameData.objectLayers.tensionHandle.modified = true;
 			gameData.objectLayers.pickArm.modified       = true;
 			gameData.objectLayers.pickHandle.modified    = true;
 			
 			if (gameData.showCutaway) {
-				gameData.showCutaway = false;
 				gameData.objectLayers.cutaway.modified = true;
 			}
 			
-			if (gameData.tensionHandleOffset[1] === tensionHandleMax) {
+			if (gameData.coreRotation === coreRotationMax) {
 				// Timeout here not needed to be precise, just dramatic pause
-				setTimeout(function(){ gameData.activeAnimations.add(animations.fadeOut); }, 600);
+				const pause = 600;
+				setTimeout(function() {
+					gameData.activeAnimations.add(animations.fadeOut);
+				}, pause);
+				
 				return false;
 			}
 			
@@ -682,6 +687,7 @@
 			doCanvasWork(gameData.objectLayers.pickArm.ctx, ctx => {
 				ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 				ctx.translate(gameData.pickingPosition[0], gameData.pickingPosition[1]);
+				ctx.translate(gameData.pickArmOrigin[0], gameData.pickArmOrigin[1]);
 				
 				// Really annoying and complicated converting the motion of the pick handle to the pick arm
 				// The range of motion (pickHandleClamp) is used to normalize
@@ -689,8 +695,8 @@
 				const pickArmRatio = pickArmMotionRange / (gameData.pickHandleClamp[1][0] - gameData.pickHandleClamp[1][1]);
 				ctx.drawImage(
 					gameData.imgs["pick_arm"], 
-					gameData.pickArmOrigin[0] + gameData.pickHandleOffset[0],
-					gameData.pickArmOrigin[1] + Math.round((gameData.pickHandleOffset[1] - gameData.pickHandleClamp[1][0]) * pickArmRatio)
+					gameData.pickHandleOffset[0],
+					Math.round((gameData.pickHandleOffset[1] + gameData.coreRotation - gameData.pickHandleClamp[1][0]) * pickArmRatio)
 				);
 			});
 		}
@@ -700,11 +706,12 @@
 			doCanvasWork(gameData.objectLayers.tensionArm.ctx, ctx => {
 				ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 				ctx.translate(gameData.pickingPosition[0], gameData.pickingPosition[1]);
+				ctx.translate(gameData.tensionArmOrigin[0], gameData.tensionArmOrigin[1]);
 				
 				ctx.drawImage(
 					gameData.imgs["tension_arm"], 
-					gameData.tensionArmOrigin[0], 
-					gameData.tensionArmOrigin[1]
+					0,
+					0
 				);
 			});
 		}
@@ -714,21 +721,24 @@
 			doCanvasWork(gameData.objectLayers.tensionHandle.ctx, ctx => {
 				ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 				ctx.translate(gameData.pickingPosition[0], gameData.pickingPosition[1]);
+				ctx.translate(gameData.tensionHandleOrigin[0], gameData.tensionHandleOrigin[1]);
 				
 				// Mask
 				ctx.drawImage(
 					gameData.imgs["tension_handle_mask"], 
-					gameData.tensionHandleOrigin[0], 
-					gameData.tensionHandleOrigin[1]
+					0,
+					0
 				);
 				
 				// Image
 				doCanvasWork(ctx, ctx => {
 					ctx.globalCompositeOperation = "source-atop";
+					ctx.translate(0, gameData.coreRotation);
+					
 					ctx.drawImage(
 						gameData.imgs["tension_handle"], 
-						gameData.tensionHandleOrigin[0], 
-						gameData.tensionHandleOrigin[1] + gameData.tensionHandleOffset[1]
+						gameData.tensionHandleOffset[0],
+						gameData.tensionHandleOffset[1]
 					);
 				});
 				
@@ -739,10 +749,11 @@
 					   within the overlay. Even though this is not the case here, the overlay and the mask are left separate. */
 					ctx.globalCompositeOperation = "overlay";
 					ctx.globalAlpha = overlayAlpha;
+					
 					ctx.drawImage(
 						gameData.imgs["tension_handle_overlay"], 
-						gameData.tensionHandleOrigin[0], 
-						gameData.tensionHandleOrigin[1]
+						0, 
+						0
 					);
 				});
 			});
@@ -753,21 +764,24 @@
 			doCanvasWork(gameData.objectLayers.pickHandle.ctx, ctx => {
 				ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 				ctx.translate(gameData.pickingPosition[0], gameData.pickingPosition[1]);
+				ctx.translate(gameData.pickHandleOrigin[0], gameData.pickHandleOrigin[1]);
 				
 				// Mask
 				ctx.drawImage(
 					gameData.imgs["pick_handle_mask"], 
-					gameData.pickHandleOrigin[0] + gameData.pickHandleOffset[0], 
-					gameData.pickHandleOrigin[1]
+					gameData.pickHandleOffset[0], 
+					0
 				);
 				
 				// Image
 				doCanvasWork(ctx, ctx => {
 					ctx.globalCompositeOperation = "source-atop";
+					ctx.translate(0, gameData.coreRotation);
+					
 					ctx.drawImage(
 						gameData.imgs["pick_handle"], 
-						gameData.pickHandleOrigin[0] + gameData.pickHandleOffset[0], 
-						gameData.pickHandleOrigin[1] + gameData.pickHandleOffset[1]
+						gameData.pickHandleOffset[0], 
+						gameData.pickHandleOffset[1]
 					);
 				});
 				
@@ -775,10 +789,11 @@
 				doCanvasWork(ctx, ctx => {
 					ctx.globalCompositeOperation = "overlay";
 					ctx.globalAlpha = overlayAlpha;
+					
 					ctx.drawImage(
 						gameData.imgs["pick_handle_overlay"], 
-						gameData.pickHandleOrigin[0] + gameData.pickHandleOffset[0], 
-						gameData.pickHandleOrigin[1]
+						gameData.pickHandleOffset[0], 
+						0
 					);
 				});
 			});
@@ -789,8 +804,13 @@
 			doCanvasWork(gameData.objectLayers.padlock.ctx, ctx => {
 				ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 				ctx.translate(gameData.pickingPosition[0], gameData.pickingPosition[1]);
+				ctx.translate(gameData.padlockOrigin[0], gameData.padlockOrigin[1]);
 				
-				ctx.drawImage(gameData.imgs["padlock"], gameData.padlockOrigin[0], gameData.padlockOrigin[1]);
+				ctx.drawImage(
+					gameData.imgs["padlock"],
+					0,
+					0
+				);
 			});
 		}
 		
@@ -804,6 +824,9 @@
 					const FALSE_GATE = 1;
 					const TRUE_GATE  = 2;
 					
+					// Radius ratio between the pick handle and the disks
+					const diskRadiusRatio = 11.6 / 19;
+					
 					// If we've drawn a frame with the cutaway, this is a cheater
 					gameData.cheater = true;
 					
@@ -811,58 +834,104 @@
 					ctx.translate(gameData.cutawayOrigin[0], gameData.cutawayOrigin[1]);
 					
 					// Background which clips the entire cutaway window
-					ctx.drawImage(gameData.imgs["cutaway_background"], 0, 0);
-					
-					// Rest of cutaway is clipped
-					ctx.globalCompositeOperation = "source-atop";
-					
-					for (let i = 0; i < gameData.disks.length; i++) {
-						// Draw disk itself
-						let diskOffset = gameData.disks[i].position;
-						ctx.drawImage(gameData.imgs["cutaway_disk"], gameData.diskOrigins[i], diskOffset);
-						
-						for (let j = 0; j < gameData.disks[i].gates.length; j++) {
-							let gateOffset = gameData.gateOrigins[j] - (gameData.imgs["cutaway_background"].height / 2);
-							
-							// Draw each gate at the correct location on the disk
-							switch (gameData.disks[i].gates[j]) {
-								case TRUE_GATE:
-									ctx.drawImage(
-										gameData.imgs["cutaway_true_gate"],
-										gameData.diskOrigins[i],
-										diskOffset - gateOffset - (gameData.imgs["cutaway_true_gate"].height / 2)
-									);
-									
-									break;
-								
-								case FALSE_GATE:
-									ctx.drawImage(
-										gameData.imgs["cutaway_false_gate"],
-										gameData.diskOrigins[i],
-										diskOffset - gateOffset - (gameData.imgs["cutaway_false_gate"].height / 2)
-									);
-									
-									break;
-								
-								case NO_GATE:
-								default:
-									break;
-							}
-						}
-					}
-					
-					// Draw sidebar
 					ctx.drawImage(
-						gameData.imgs["cutaway_sidebar"],
+						gameData.imgs["cutaway_background"],
 						0,
-						(gameData.imgs["cutaway_background"].height / 2) - (gameData.imgs["cutaway_sidebar"].height / 2)
+						0
 					);
 					
-					// Overlay
+					const cutawayMidpoint = gameData.imgs["cutaway_background"].height / 2;
+					
+					doCanvasWork(ctx, ctx => {
+						// Clipped onto background
+						ctx.globalCompositeOperation = "source-atop";
+						
+						// Centered on the midpoint of the cutaway
+						ctx.translate(0, cutawayMidpoint);
+						
+						// Also is affected by core rotation
+						ctx.translate(0, gameData.coreRotation * diskRadiusRatio);
+						
+						for (let i = 0; i < gameData.disks.length; i++) {
+							// Draw disk itself
+							let diskOffset = (gameData.disks[i].position - gameData.diskDefaultBounds[0]) * diskRadiusRatio;
+							
+							ctx.drawImage(
+								gameData.imgs["cutaway_disk"],
+								gameData.diskOrigins[i],
+								// Divide by 4 here because the disk center is +90 degrees forward at the start
+								// On top of dividing by 2 already to center the disk at the drawing location
+								// Basically, we want to center the disk at the 3/4ths mark
+								Math.round(diskOffset - (gameData.imgs["cutaway_disk"].height / 4))
+							);
+							
+							for (let j = 0; j < gameData.disks[i].gates.length; j++) {
+								let gateOffset = gameData.gateOrigins[j] * diskRadiusRatio;
+								
+								// Draw each gate at the correct location on the disk
+								switch (gameData.disks[i].gates[j]) {
+									case TRUE_GATE:
+										ctx.drawImage(
+											gameData.imgs["cutaway_true_gate"],
+											gameData.diskOrigins[i],
+											Math.round(diskOffset - gateOffset - (gameData.imgs["cutaway_true_gate"].height / 2))
+										);
+										
+										break;
+									
+									case FALSE_GATE:
+										ctx.drawImage(
+											gameData.imgs["cutaway_false_gate"],
+											gameData.diskOrigins[i],
+											Math.round(diskOffset - gateOffset - (gameData.imgs["cutaway_false_gate"].height / 2))
+										);
+										
+										break;
+									
+									case NO_GATE:
+									default:
+										break;
+								}
+							}
+						}
+					}); // End of drawing disks
+					
+					// Draw disk pack overlay
 					doCanvasWork(ctx, ctx => {
 						ctx.globalCompositeOperation = "overlay";
 						ctx.globalAlpha = overlayAlpha;
-						ctx.drawImage(gameData.imgs["cutaway_overlay"], 0, 0);
+						
+						ctx.drawImage(
+							gameData.imgs["cutaway_disks_overlay"],
+							0,
+							0
+						);
+					});
+					
+					// Draw sidebar, clipped by background and affected by core rotation
+					doCanvasWork(ctx, ctx => {
+						ctx.globalCompositeOperation = "source-atop";
+						ctx.translate(0, cutawayMidpoint);
+						ctx.translate(0, gameData.coreRotation * diskRadiusRatio);
+						
+						// Sidebar
+						ctx.drawImage(
+							gameData.imgs["cutaway_sidebar"],
+							0,
+							Math.round(0 - (gameData.imgs["cutaway_sidebar"].height / 2))
+						);
+					});
+					
+					// Finally draw the whole cutaway overlay
+					doCanvasWork(ctx, ctx => {
+						ctx.globalCompositeOperation = "overlay";
+						ctx.globalAlpha = overlayAlpha;
+						
+						ctx.drawImage(
+							gameData.imgs["cutaway_overlay"],
+							0,
+							0
+						);
 					});
 				}
 			});
@@ -907,14 +976,15 @@
 						let x = text.origin[0];
 						let y = text.origin[1];
 						
-						let textWidth = ctx.measureText(text.content).width;
-						
+						let textWidth;
 						switch (text.justify) {
 							case "center":
+								textWidth = ctx.measureText(text.content).width;
 								x -= textWidth / 2;
 								break;
 							
 							case "right":
+								textWidth = ctx.measureText(text.content).width;
 								x -= textWidth;
 								break;
 							
