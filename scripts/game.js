@@ -931,7 +931,7 @@
 		
 		// Frame has been drawn, mark all layers as unmodified
 		// Do this here just as a pattern in case of two objects sharing a layer yet opting to be drawn in different blocks
-		layers.map(layer => layer.modified = false);
+		layers.forEach(layer => layer.modified = false);
 	}
 	
 	// Accept fresh input data from mouse/keyboard or touch events about movement
@@ -1027,6 +1027,9 @@
 			
 			// Apply new position to pick tip
 			gameData.pickHandleOffset[0] = nox;
+			
+			gameData.objectLayers.pickHandle.modified = true;
+			gameData.objectLayers.pickArm.modified = true;
 		}
 		
 		
@@ -1059,10 +1062,10 @@
 			
 			// Apply new position to pick tip
 			gameData.pickHandleOffset[1] = noy;
+			
+			gameData.objectLayers.pickHandle.modified = true;
+			gameData.objectLayers.pickArm.modified = true;
 		}
-		
-		gameData.objectLayers.pickHandle.modified = true;
-		gameData.objectLayers.pickArm.modified = true;
 	}
 	
 	// Accept fresh input data about the tension status
