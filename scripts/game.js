@@ -30,17 +30,12 @@
 		// Layer where each object is to be drawn, for easier access
 		objectLayers : {
 			background    : layers[0],
-			
 			tensionArm    : layers[2],
 			tensionHandle : layers[3],
-			
 			pickArm       : layers[1],
 			pickHandle    : layers[4],
-			
 			padlock       : layers[5],
-			
 			cutaway       : layers[6],
-			
 			foreground    : layers[7]
 		},
 		
@@ -71,31 +66,39 @@
 		},
 		
 		// Fixed values of where to start to draw these
-		pickArmOrigin       : [-200,  91],
-		padlockOrigin       : [-265, -69],
-		tensionArmOrigin    : [  59,  75],
-		cutawayOrigin       : [-198,  40],
+		pickArmOrigin       : [ -200,  92 ],
+		padlockOrigin       : [ -265, -69 ],
+		tensionArmOrigin    : [   59,  75 ],
+		cutawayOrigin       : [ -198,  40 ],
 		
-		pickHandleOrigin    : [   0,  0 ],
-		tensionHandleOrigin : [ 495,  0 ],
+		pickHandleOrigin           : [   0,   0 ],
+		tensionHandleOrigin        : [ 495,   0 ],
+		tensionHandleTextureOrigin : [   0, -20 ],
 		
 		// Archive of default values for resetting
-		pickHandleOffsetDefault    : [ 0, -160],
-		tensionHandleOffsetDefault : [ 0, -20 ],
-		pickingPositionDefault     : [70,  155],
+		pickHandleOffsetDefault    : [  0, -160 ],
+		pickingPositionDefault     : [ 70,  155 ],
+		
+		// Alternate value for cutaway mode
+		pickingPositionCutaway      : [ 202, 155 ],
+		
+		coreRotationUntensioned :   5, // Amount of core rotation that signifies no tension applied
+		coreRotationDefault     :  -2, // Amount of core rotation that signifies no progress
+		coreRotationFalseSet    : -10, // Amount of core rotation that signifies a false set
+		coreRotationOpen        : -75, // Amount of core rotation that signifies an open
 		
 		// Clamp values for the pick handle offset during normal operation
-		pickHandleClamp       : [ [0, 183], [-165, -5 ] ],
+		pickHandleClamp       : [ [ 0, 183 ], [ -165, -5 ] ],
 		
-		diskOrigins           : [2,22,42,62,82,102,122,142,162,182],  // Disk positions as x-offsets of pick handle
-		diskSpacing           : 20,                                   // Archive of above
-		diskDefaultBounds     : [-5, -165],                           // Range of motion a disk has when completely unbound
-		gateOrigins           : [-160,-130,-100,-70,-40,-10],         // Gate positions as y-offsets of pick handle
+		diskOrigins           : [ 2,22,42,62,82,102,122,142,162,182 ], // Disk positions as x-offsets of pick handle
+		diskSpacing           : 20,                                    // Archive of above
+		diskDefaultBounds     : [ -5, -165 ],                          // Range of motion a disk has when completely unbound
+		gateOrigins           : [ -160,-130,-100,-70,-40,-10 ],        // Gate positions as y-offsets of pick handle
 		// TODO: if needed, arbitrary gate positions can be used with Map objects 
-		diskWidth             : 8,                                    // How close you must be on the x-axis to be considered on the disk
-		pickTipSlop           : 8,                                    // Slop on the y-axis the pick tip has inside the disk before it starts turning it
-		gateFalseBindingSlop  : 8,                                    // How much jiggle a binding disk in a false gate has
-		gateTrueBindingSlop   : 16,                                   // How much jiggle a nonbinding disk in a gate has
+		diskWidth             : 8,                                     // How close you must be on the x-axis to be considered on the disk
+		pickTipSlop           : 8,                                     // Slop on the y-axis the pick tip has inside the disk before it starts turning it
+		gateFalseBindingSlop  : 8,                                     // How much jiggle a binding disk in a false gate has
+		gateTrueBindingSlop   : 16,                                    // How much jiggle a nonbinding disk in a gate has
 		
 		
 		// ========== Mutable stuff below here ========== //
@@ -109,11 +112,12 @@
 		imgs       : {},
 		imgsLoaded : false,
 		
-		// Dynamic values of how far away to draw these from their origin
-		pickHandleOffset    : [0, -160],
-		tensionHandleOffset : [0, -20 ], // Index 0 unused
+		// Dynamic values of how far away to draw the handle from its origin
+		pickHandleOffset : [ 0, -160 ],
 		
-		coreRotation : 0,
+		// How far the core is currently rotated (for drawing), and how far is it input to be rotated (for animating)
+		coreRotation       : 0,
+		coreRotationTarget : 0,
 		
 		// Disk data
 		disks         : [],                     // Array of disk objects, each with gates, position, and movement limits
@@ -123,7 +127,7 @@
 		
 		tensionReleased : false,
 		
-		useDarkTheme : window.matchMedia("(prefers-color-scheme: dark)").matches,
+		useDarkTheme : matchMedia("(prefers-color-scheme: dark)").matches,
 		
 		startTime : null,
 		endTime   : null,
@@ -184,7 +188,7 @@
 	}
 	
 	// Recomputes the binding status of each disk based on free movement made without tension. Result is updated in gameData.disks[i].bounds
-	// Also returns true if there exist a binding disk, for detecting wins
+	// Returns the current distance the core is able to be rotated (none, false set, or open)
 	function recalculateDiskBinds() {	
 		// Enumeration of disk spots
 		const NO_GATE    = 0;
@@ -247,8 +251,9 @@
 					gameData.disks[gameData.bindingOrder1[k]].bounds = [...gameData.diskDefaultBounds];
 				}
 				
-				debug("Disk bindings recalculated, binder found: true");
-				return true;
+				
+				debug("Disk bindings recalculated, no false set");
+				return gameData.coreRotationDefault;
 			}
 		}
 		
@@ -275,8 +280,13 @@
 			}
 		}
 		
-		debug(`Disk bindings recalculated, binder found: ${falseFound}`);
-		return falseFound;
+		if (falseFound) {
+			debug("Disk bindings recalculated, in false set");
+			return gameData.coreRotationFalseSet;
+		} else {
+			debug("Disk bindings recalculated, open");
+			return gameData.coreRotationOpen;
+		}
 	}
 	
 	// Sets up gameData with random disks which are all zeroed
@@ -391,18 +401,17 @@
 		
 		
 		// Setup stuff
-		gameData.gameState           = "main";
-		gameData.tensionReleased     = false;
-		gameData.startTime           = null;
-		gameData.endTime             = null;
-		gameData.endFade             = 0;
-		gameData.pickingPosition     = [...gameData.pickingPositionDefault];
-		gameData.pickHandleOffset    = [...gameData.pickHandleOffsetDefault];
-		gameData.tensionHandleOffset = [...gameData.tensionHandleOffsetDefault];
-		gameData.coreRotation        = 0;
-		gameData.randomSeed          = randomSeed;
-		gameData.cheater             = false;
-		gameData.showCutaway         = false;
+		gameData.gameState             = "main";
+		gameData.tensionReleased       = false;
+		gameData.startTime             = null;
+		gameData.endTime               = null;
+		gameData.endFade               = 0;
+		gameData.pickingPosition       = [...gameData.pickingPositionDefault];
+		gameData.pickHandleOffset      = [...gameData.pickHandleOffsetDefault];
+		gameData.coreRotationTarget    = gameData.coreRotationDefault;
+		gameData.randomSeed            = randomSeed;
+		gameData.cheater               = false;
+		gameData.showCutaway           = false;
 		
 		cutawayCheckbox.checked = false;
 		
@@ -433,7 +442,7 @@
 		gameData.disks.push(makeDisk(bitting[bitting.length - 1], true)); // No false gates on final disk which is a spinner
 		
 		// Finally do initial calculation of disk bindings
-		recalculateDiskBinds();
+		gameData.coreRotation = recalculateDiskBinds();
 		
 		// Ready to play
 		loadImgs(gameLoop);
@@ -506,41 +515,14 @@
 	
 	// Each animation returns a bool if it should continue to run in the next frame
 	const animations = {
-		tensionUpdate : function(msSincePrevFrame) {
-			const tensionStep = 0.09 * (gameData.tensionReleased ? 1 : -1) * msSincePrevFrame;
-			const tensionMin  = -20;
-			const tensionMax  = -15;
-			
-			gameData.tensionHandleOffset[1] += tensionStep;
-			gameData.tensionHandleOffset[1] = clamp(tensionMin, gameData.tensionHandleOffset[1], tensionMax);
-			
-			gameData.objectLayers.tensionHandle.modified = true;
-			
-			// Reached fully tensioned state
-			if (!gameData.tensionReleased && gameData.tensionHandleOffset[1] === tensionMin) {
-				if (gameData.gameState === "ending") {
-					// Winner
-					gameData.activeAnimations.add(animations.turnCore);
-				}
-				
-				return false;
-			}
-			
-			// Reached fully released state
-			if (gameData.tensionReleased && gameData.tensionHandleOffset[1] === tensionMax) {
-				return false;
-			}
-			
-			return true;
-		},
-		
 		cutawayPan : function(msSincePrevFrame) {
 			const panStep = 0.8 * (gameData.showCutaway ? 1 : -1) * msSincePrevFrame;
-			const panMax  = 202;
-			const panMin  = 70;
 			
-			gameData.pickingPosition[0] += panStep;
-			gameData.pickingPosition[0] = clamp(panMin, gameData.pickingPosition[0], panMax);
+			gameData.pickingPosition[0] = clamp(
+				gameData.pickingPositionDefault[0],
+				gameData.pickingPosition[0] + panStep,
+				gameData.pickingPositionCutaway[0]
+			);
 			
 			// Most objects use the picking position
 			gameData.objectLayers.tensionArm.modified    = true;
@@ -551,23 +533,27 @@
 			gameData.objectLayers.cutaway.modified       = true;
 			
 			// Reached fully panned state
-			if (gameData.showCutaway && gameData.pickingPosition[0] === panMax) {
+			if (gameData.showCutaway && gameData.pickingPosition[0] === gameData.pickingPositionCutaway[0]) {
 				return false;
 			}
 			
 			// Reached fully reset state
-			if (!gameData.showCutaway && gameData.pickingPosition[0] === panMin) {
+			if (!gameData.showCutaway && gameData.pickingPosition[0] === gameData.pickingPositionDefault[0]) {
 				return false;
 			}
 			
 			return true;
 		},
 		
-		turnCore : function(msSincePrevFrame) {
-			const turnStep         = -0.25 * msSincePrevFrame;
-			const coreRotationMax = -75;
+		coreRotationUpdate : function(msSincePrevFrame) {
+			const rotateStep = 0.15 * msSincePrevFrame;
 			
-			gameData.coreRotation = Math.max(gameData.coreRotation + turnStep, coreRotationMax);
+			// Step from coreRotation towards coreRotationTarget, from positive or negative direction
+			if (gameData.coreRotation > gameData.coreRotationTarget) {
+				gameData.coreRotation = Math.max(gameData.coreRotation - rotateStep, gameData.coreRotationTarget);
+			} else {
+				gameData.coreRotation = Math.min(gameData.coreRotation + rotateStep, gameData.coreRotationTarget);
+			}
 			
 			gameData.objectLayers.tensionHandle.modified = true;
 			gameData.objectLayers.pickArm.modified       = true;
@@ -577,12 +563,17 @@
 				gameData.objectLayers.cutaway.modified = true;
 			}
 			
-			if (gameData.coreRotation === coreRotationMax) {
-				// Timeout here not needed to be precise, just dramatic pause
-				const pause = 600;
-				setTimeout(function() {
-					gameData.activeAnimations.add(animations.fadeOut);
-				}, pause);
+			// Check if done with animation
+			if (gameData.coreRotation === gameData.coreRotationTarget) {
+				
+				// Check winner
+				if (gameData.coreRotation === gameData.coreRotationOpen) {
+					// Timeout here not needed to be precise, just dramatic pause
+					const pause = 600;
+					setTimeout(function() {
+						gameData.activeAnimations.add(animations.fadeOut);
+					}, pause);
+				}
 				
 				return false;
 			}
@@ -693,10 +684,15 @@
 				// The range of motion (pickHandleClamp) is used to normalize
 				const pickArmMotionRange = 26;
 				const pickArmRatio = pickArmMotionRange / (gameData.pickHandleClamp[1][0] - gameData.pickHandleClamp[1][1]);
+				
+				let pickHandleDisplacement = gameData.coreRotation + 
+				                             gameData.pickHandleOffset[1] - 
+				                             gameData.pickHandleClamp[1][0];
+				
 				ctx.drawImage(
 					gameData.imgs["pick_arm"], 
 					gameData.pickHandleOffset[0],
-					Math.round((gameData.pickHandleOffset[1] + gameData.coreRotation - gameData.pickHandleClamp[1][0]) * pickArmRatio)
+					Math.round(pickHandleDisplacement * pickArmRatio)
 				);
 			});
 		}
@@ -730,15 +726,16 @@
 					0
 				);
 				
-				// Image
+				// Texture
 				doCanvasWork(ctx, ctx => {
 					ctx.globalCompositeOperation = "source-atop";
 					ctx.translate(0, gameData.coreRotation);
+					ctx.translate(gameData.tensionHandleTextureOrigin[0], gameData.tensionHandleTextureOrigin[1]);
 					
 					ctx.drawImage(
 						gameData.imgs["tension_handle"], 
-						gameData.tensionHandleOffset[0],
-						gameData.tensionHandleOffset[1]
+						0,
+						0
 					);
 				});
 				
@@ -773,7 +770,7 @@
 					0
 				);
 				
-				// Image
+				// Texture
 				doCanvasWork(ctx, ctx => {
 					ctx.globalCompositeOperation = "source-atop";
 					ctx.translate(0, gameData.coreRotation);
@@ -1149,33 +1146,41 @@
 			gameData.startTime = performance.now();
 		}
 		
-		debug(`Input tension released: ${tensionReleased}`);
-		
 		// Only do anything if the new status is different from the existing status
 		if (tensionReleased !== gameData.tensionReleased) {
 			// Update status
 			gameData.tensionReleased = tensionReleased;
 			
-			// Run the animation
-			gameData.activeAnimations.add(animations.tensionUpdate);
-			
 			if (gameData.tensionReleased) {
+				debug("Input tension released");
+				
+				// Rotate core backwards
+				gameData.coreRotationTarget = gameData.coreRotationUntensioned;
+				
 				// Without tension, all disk bounds are set to default
 				for (let disk of gameData.disks) {
 					disk.bounds = [...gameData.diskDefaultBounds];
 				}
 			} else {
+				debug("Input tension reapplied");
+				
 				// Under tension, redo all the bounds
-				if (!recalculateDiskBinds()) {
+				gameData.coreRotationTarget = recalculateDiskBinds();
+				
+				// Check winner immediately for calculating end time and stopping further input
+				if (gameData.coreRotationTarget === gameData.coreRotationOpen) {
 					// Winner!
 					gameData.endTime = performance.now();
-					debug("Game won");
 					
-					// Changing the gameState blocks further input, and causes the tensionUpdate 
-					// animation to chain to the turnCore animation, triggering the end of the game
+					// Changing the gameState blocks further input, and causes the coreRotationUpdate 
+					// animation to trigger the end of the game upon reaching the open state
 					gameData.gameState = "ending";
+					debug("Game won");
 				}
 			}
+			
+			// Animate new core rotation
+			gameData.activeAnimations.add(animations.coreRotationUpdate);
 		}
 	}
 	
@@ -1397,7 +1402,7 @@
 		drawFrame();
 	}
 	
-	window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", colorModeChange);
+	matchMedia("(prefers-color-scheme: dark)").addEventListener("change", colorModeChange);
 	
 	
 	initGame();
