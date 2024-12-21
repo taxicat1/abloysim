@@ -1016,6 +1016,11 @@
 		movementX = Number(movementX) || 0;
 		movementY = Number(movementY) || 0;
 		
+		// Ignore null input, which seems to trigger frequently
+		if (movementX === 0 && movementY === 0) {
+			return;
+		}
+		
 		debug(`Input movement: [ ${movementX}, ${movementY} ]`);
 		
 		// Mouse position for the pick handle input
@@ -1146,8 +1151,11 @@
 			gameData.startTime = performance.now();
 		}
 		
+		// Cast to bool, just in case of strange input
+		tensionReleased = !!tensionReleased;
+		
 		// Only do anything if the new status is different from the existing status
-		if (tensionReleased !== gameData.tensionReleased) {
+		if (gameData.tensionReleased !== tensionReleased) {
 			// Update status
 			gameData.tensionReleased = tensionReleased;
 			
@@ -1186,9 +1194,25 @@
 	
 	// Accept fresh input data about whether to display the cutaway
 	function inputCutaway(showCutaway) {
-		debug(`Input show cutaway: ${showCutaway}`);
+		if (gameData.gameState !== "main") {
+			return;
+		}
+		
+		// Cast to bool, just in case of strange input
+		showCutaway = !!showCutaway;
+		
+		// Only do anything if the new status is different from the existing status
 		if (gameData.showCutaway !== showCutaway) {
+			if (showCutaway) {
+				debug("Input show cutaway");
+			} else {
+				debug("Input hide cutaway");
+			}
+			
+			// Update status
 			gameData.showCutaway = showCutaway;
+			
+			// Trigger panning animation
 			gameData.activeAnimations.add(animations.cutawayPan);
 		}
 	}
@@ -1249,7 +1273,7 @@
 	
 	// Touch hooking
 	const touchData = {
-		tensionerTouchRegion : [800, 0, 1000, 500], // x1, y1, x2, y2 of tensioner touch zone
+		tensionerTouchRegion : [ 800, 0, 1000, 500 ], // x1, y1, x2, y2 of tensioner touch zone
 		
 		primaryTouchId             : null,      // Identifier of touch currently controlling picking
 		previousPrimaryTouchOffset : [0, 0],    // Previous location of above for tracking movement over time
@@ -1385,7 +1409,7 @@
 	viewport.addEventListener("touchmove",   updateTouchInput);
 	viewport.addEventListener("touchcancel", updateTouchInput);
 	
-	// Also accept into from the cutaway checkbox
+	// Also accept info from the cutaway checkbox
 	function checkboxChange(event) {
 		inputCutaway(this.checked);
 	}
